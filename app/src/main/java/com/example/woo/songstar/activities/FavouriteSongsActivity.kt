@@ -14,10 +14,7 @@ import com.example.woo.songstar.intefaces.ApiInterface
 import com.example.woo.songstar.models.ItunesAPIResponse
 import com.example.woo.songstar.models.Song
 import com.example.woo.songstar.models.SongDetails
-import com.example.woo.songstar.utils.AppConstants
-import com.example.woo.songstar.utils.AppSharedPreferences
-import com.example.woo.songstar.utils.CircleImage
-import com.example.woo.songstar.utils.CommonBottomNavigationBar
+import com.example.woo.songstar.utils.*
 import kotlinx.android.synthetic.main.activity_artists.bottomBarMenu
 import kotlinx.android.synthetic.main.activity_songs.*
 import kotlinx.android.synthetic.main.layout_top_bar.*
@@ -44,13 +41,6 @@ class FavouriteSongsActivity : AppCompatActivity() {
     override fun onResume() {
         super.onResume()
         this.getFavouriteSongs()
-    }
-
-    private fun getRetrofit(): Retrofit {
-        return Retrofit.Builder()
-            .baseUrl("https://itunes.apple.com/")
-            .addConverterFactory(GsonConverterFactory.create())
-            .build()
     }
 
     private fun initView() {
@@ -123,7 +113,7 @@ class FavouriteSongsActivity : AppCompatActivity() {
             val artist = db?.artistDao()?.getArtistById(song.artistId)!!.first()
             val param = artist.name.toLowerCase(Locale.getDefault()).replace(" ", "+") + "+" + song.name.toLowerCase(
                 Locale.getDefault()).replace(" ", "+")
-            val call = getRetrofit().create(ApiInterface::class.java).search(param).execute()
+            val call = AppUtils.getRetrofit().create(ApiInterface::class.java).search(param).execute()
             uiThread {
                 if(call.isSuccessful) {
                     val response = call.body() as ItunesAPIResponse
