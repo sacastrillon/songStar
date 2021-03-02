@@ -48,7 +48,7 @@ class ProfileActivity : AppCompatActivity() {
         this.preferences = AppSharedPreferences.getInstance()
         this.db = AppDatabase.getDatabase(this@ProfileActivity)
         this.tvTitle.text = getString(R.string.profile)
-
+        this.ivProfile.visibility = View.GONE
         if(preferences.getBoolean(this, AppSharedPreferences.IS_ADMIN)) {
             this.cvAdminOptions.visibility = View.VISIBLE
         }
@@ -133,7 +133,6 @@ class ProfileActivity : AppCompatActivity() {
             val image: ImageDecoder.Source = ImageDecoder.createSource(this.contentResolver, uri)
             val bitmap = ImageDecoder.decodeBitmap(image)
             this.ivProfilePic.setImageDrawable(CircleImage(bitmap))
-            this.ivProfile.setImageDrawable(CircleImage(bitmap))
         }
     }
 

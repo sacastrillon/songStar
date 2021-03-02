@@ -7,6 +7,7 @@ import android.view.View
 import com.example.woo.songstar.R
 import com.example.woo.songstar.database.AppDatabase
 import com.example.woo.songstar.models.Artist
+import com.example.woo.songstar.models.MostListenedSong
 import com.example.woo.songstar.models.Song
 import com.example.woo.songstar.models.User
 import com.example.woo.songstar.utils.AppSharedPreferences
@@ -64,6 +65,7 @@ class OnBoardActivity : AppCompatActivity() {
             db?.artistDao()?.insert(eagles)
             db?.artistDao()?.insert(theBlackKeys)
             this@OnBoardActivity.insertSongs()
+            this@OnBoardActivity.insertMostListenedSongs()
         }
 
     }
@@ -139,6 +141,24 @@ class OnBoardActivity : AppCompatActivity() {
             db?.songDao()?.insert(song)
             song = Song("Mind Eraser", "El Camino", 3)
             db?.songDao()?.insert(song)
+        }
+    }
+
+    private fun insertMostListenedSongs() {
+        doAsync {
+            var song = MostListenedSong(1, 1, 4)
+            db?.mostListenedSongDao()?.insert(song)
+            song = MostListenedSong(5, 1, 2)
+            db?.mostListenedSongDao()?.insert(song)
+            song = MostListenedSong(8, 1, 1)
+            db?.mostListenedSongDao()?.insert(song)
+
+            song = MostListenedSong(10, 2, 4)
+            db?.mostListenedSongDao()?.insert(song)
+            song = MostListenedSong(20, 2, 2)
+            db?.mostListenedSongDao()?.insert(song)
+            song = MostListenedSong(15, 2, 1)
+            db?.mostListenedSongDao()?.insert(song)
         }
     }
 }

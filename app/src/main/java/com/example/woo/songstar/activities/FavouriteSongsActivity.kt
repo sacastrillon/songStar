@@ -4,19 +4,25 @@ import android.content.Intent
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Bundle
+import android.view.View
+import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
-import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.*
 import com.example.woo.songstar.R
 import com.example.woo.songstar.adapters.FavouriteSongAdapter
+import com.example.woo.songstar.adapters.MostListenedSongsAdapter
 import com.example.woo.songstar.database.AppDatabase
 import com.example.woo.songstar.intefaces.ApiInterface
+import com.example.woo.songstar.models.Artist
 import com.example.woo.songstar.models.ItunesAPIResponse
 import com.example.woo.songstar.models.Song
 import com.example.woo.songstar.models.SongDetails
 import com.example.woo.songstar.utils.*
 import kotlinx.android.synthetic.main.activity_artists.bottomBarMenu
+import kotlinx.android.synthetic.main.activity_favourite_songs.*
 import kotlinx.android.synthetic.main.activity_songs.*
+import kotlinx.android.synthetic.main.activity_songs.rvSongs
 import kotlinx.android.synthetic.main.layout_top_bar.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
@@ -31,15 +37,13 @@ class FavouriteSongsActivity : AppCompatActivity() {
     private var favouriteSongs: List<Song> = emptyList()
     private var adapter: FavouriteSongAdapter? = null
     private var linearLayoutManager: LinearLayoutManager? = null
+    private var artists: List<Artist> = emptyList()
+    private var mostListenedSongs: List<Song> = emptyList()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_favourite_songs)
         this.initView()
-    }
-
-    override fun onResume() {
-        super.onResume()
         this.getFavouriteSongs()
     }
 
@@ -82,12 +86,31 @@ class FavouriteSongsActivity : AppCompatActivity() {
         this.rvSongs.adapter = this.adapter
     }
 
+    private fun setMostListenedAdapter() {
+        val linearLayoutManager = LinearLayoutManager(this, RecyclerView.HORIZONTAL, false)
+        val snapHelper: SnapHelper = PagerSnapHelper()
+        this.rvMostListenedSongs.layoutManager = linearLayoutManager
+        val mostListenedSongsAdapter = MostListenedSongsAdapter(this, this.mostListenedSongs, this)
+        this.rvMostListenedSongs.adapter = mostListenedSongsAdapter
+        this.rvMostListenedSongs.onFlingListener = null
+        snapHelper.attachToRecyclerView(this.rvMostListenedSongs)
+        val dividerItemDecoration = DividerItemDecoration(this, linearLayoutManager.orientation)
+        this.rvMostListenedSongs.addItemDecoration(dividerItemDecoration)
+    }
+
     private fun getFavouriteSongs() {
         doAsync {
             this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongs(
                 AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
+            this@FavouriteSongsActivity.mostListenedSongs = db?.mostListenedSongDao()?.getMostListenedSongsByUser(
+                AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
+            this@FavouriteSongsActivity.artists = db?.artistDao()?.getAll()!!
             runOnUiThread{
                 this@FavouriteSongsActivity.setAdapter()
+                if(this@FavouriteSongsActivity.mostListenedSongs.isNotEmpty()) {
+                    this@FavouriteSongsActivity.llMostListenedSongs.visibility = View.VISIBLE
+                    this@FavouriteSongsActivity.setMostListenedAdapter()
+                }
             }
         }
     }
@@ -140,5 +163,9 @@ class FavouriteSongsActivity : AppCompatActivity() {
             putExtra(AppConstants.SONG_DETAILS, songDetails)
         }
         startActivity(intent)
+    }
+
+    fun getArtistById(artistId: Int): Artist {
+        return artists.filter { it.id == artistId }.first()
     }
 }

@@ -52,4 +52,5 @@
     <string name="song_already_on_your_favourites">Song already on your favourites.</string>
     <string name="favourite_songs">Favourite Songs</string>
     <string name="favourite_removed_successfully">Song deleted from favourites successfully.</string>
+    <string name="most_listened_songs">Most Listened Songs</string>
 </resources>

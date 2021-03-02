@@ -7,7 +7,13 @@ import androidx.room.RoomDatabase
 import com.example.woo.songstar.components.*
 import com.example.woo.songstar.models.*
 
-@Database(entities = [User::class, Artist::class, Song::class, DetailArtistSong::class, SearchUser::class, FavouriteSong::class],
+@Database(entities = [User::class,
+    Artist::class,
+    Song::class,
+    DetailArtistSong::class,
+    SearchUser::class,
+    FavouriteSong::class,
+    MostListenedSong::class],
     version = 1)
 abstract class AppDatabase: RoomDatabase() {
 
@@ -16,6 +22,7 @@ abstract class AppDatabase: RoomDatabase() {
     abstract fun songDao(): SongDao
     abstract fun searchUserDao(): SearchUserDao
     abstract fun favouriteSongDao(): FavoriteSongDao
+    abstract fun mostListenedSongDao(): MostListenedSongDao
 
     companion object {
         @Volatile
