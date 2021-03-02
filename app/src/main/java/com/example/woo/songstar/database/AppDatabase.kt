@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
-import com.example.woo.songstar.components.*
+import com.example.woo.songstar.database.dao.*
 import com.example.woo.songstar.models.*
 
 @Database(entities = [User::class,

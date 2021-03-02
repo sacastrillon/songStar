@@ -9,7 +9,7 @@ data class User (
     val name: String,
     val username: String,
     val password: String,
-    val language: String,
+    var language: String,
     val photo: String,
     val isAdmin: Boolean,
     @PrimaryKey(autoGenerate = true)

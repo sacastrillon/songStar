@@ -5,7 +5,6 @@ import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Bundle
 import android.view.View
-import android.widget.LinearLayout
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.*
@@ -21,13 +20,10 @@ import com.example.woo.songstar.models.SongDetails
 import com.example.woo.songstar.utils.*
 import kotlinx.android.synthetic.main.activity_artists.bottomBarMenu
 import kotlinx.android.synthetic.main.activity_favourite_songs.*
-import kotlinx.android.synthetic.main.activity_songs.*
 import kotlinx.android.synthetic.main.activity_songs.rvSongs
 import kotlinx.android.synthetic.main.layout_top_bar.*
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
-import retrofit2.Retrofit
-import retrofit2.converter.gson.GsonConverterFactory
 import java.io.File
 import java.util.*
 
@@ -100,7 +96,7 @@ class FavouriteSongsActivity : AppCompatActivity() {
 
     private fun getFavouriteSongs() {
         doAsync {
-            this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongs(
+            this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
                 AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
             this@FavouriteSongsActivity.mostListenedSongs = db?.mostListenedSongDao()?.getMostListenedSongsByUser(
                 AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
@@ -121,7 +117,7 @@ class FavouriteSongsActivity : AppCompatActivity() {
                 AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt(), song.id)!!
             if(favouriteSong.isNotEmpty()) {
                 db?.favouriteSongDao()?.delete(favouriteSong.first())
-                this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongs(
+                this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
                     AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
             }
             runOnUiThread{

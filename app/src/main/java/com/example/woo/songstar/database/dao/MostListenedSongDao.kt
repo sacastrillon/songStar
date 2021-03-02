@@ -1,4 +1,4 @@
-package com.example.woo.songstar.components
+package com.example.woo.songstar.database.dao
 
 import androidx.room.Dao
 import androidx.room.Insert

@@ -22,7 +22,7 @@
         android:textAlignment="center"
         android:layout_marginHorizontal="20dp"
         android:textColor="@color/colorPrimaryDark"
-        android:layout_below="@id/ivClose"
+        android:layout_below="@id/ivCloseLanguage"
         android:textSize="9pt"/>
 
     <Spinner

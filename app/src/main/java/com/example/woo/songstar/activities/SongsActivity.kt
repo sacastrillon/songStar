@@ -175,7 +175,7 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     private fun getSongs() {
         doAsync {
             this@SongsActivity.songs = db?.songDao()?.getAll()!!
-            this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongs(
+            this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
                 AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt()
             )!!
             this@SongsActivity.totalItems = songs.size
@@ -188,7 +188,7 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     private fun getSongsByArtist(artistId: Int) {
         doAsync {
             this@SongsActivity.songs = db?.songDao()?.getBySongsByArtist(artistId)!!
-            this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongs(
+            this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
                 AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt()
             )!!
             this@SongsActivity.totalItems = songs.size
@@ -233,7 +233,7 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
                 val favouriteSong = FavouriteSong(song.id,
                     AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt())
                 this@SongsActivity.db?.favouriteSongDao()?.insert(favouriteSong)
-                this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongs(
+                this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
                     AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt()
                 )!!
                 runOnUiThread {

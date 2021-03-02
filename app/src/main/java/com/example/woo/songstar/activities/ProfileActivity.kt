@@ -128,7 +128,7 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun setAvatar() {
         val uri = Uri.fromFile(getFileStreamPath(preferences.getString(this, AppSharedPreferences.USERNAME)))
-        val picture = File(uri.path)
+        val picture = File(uri.path.toString())
         if(picture.exists()) {
             val image: ImageDecoder.Source = ImageDecoder.createSource(this.contentResolver, uri)
             val bitmap = ImageDecoder.decodeBitmap(image)
