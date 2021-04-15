@@ -11,13 +11,19 @@ import androidx.recyclerview.widget.*
 import com.example.woo.songstar.R
 import com.example.woo.songstar.adapters.FavouriteSongAdapter
 import com.example.woo.songstar.adapters.MostListenedSongsAdapter
-import com.example.woo.songstar.database.AppDatabase
+import com.example.woo.songstar.database.dao.ArtistDao
+import com.example.woo.songstar.database.dao.FavoriteSongDao
+import com.example.woo.songstar.database.dao.MostListenedSongDao
 import com.example.woo.songstar.intefaces.ApiInterface
 import com.example.woo.songstar.models.Artist
 import com.example.woo.songstar.models.ItunesAPIResponse
 import com.example.woo.songstar.models.Song
 import com.example.woo.songstar.models.SongDetails
-import com.example.woo.songstar.utils.*
+import com.example.woo.songstar.utils.AppConstants
+import com.example.woo.songstar.utils.AppSharedPreferences
+import com.example.woo.songstar.utils.CircleImage
+import com.example.woo.songstar.utils.CommonBottomNavigationBar
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_artists.bottomBarMenu
 import kotlinx.android.synthetic.main.activity_favourite_songs.*
 import kotlinx.android.synthetic.main.activity_songs.rvSongs
@@ -26,10 +32,20 @@ import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 import java.io.File
 import java.util.*
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class FavouriteSongsActivity : AppCompatActivity() {
 
-    private var db: AppDatabase? = null
+    @Inject
+    lateinit var favouriteDao: FavoriteSongDao
+    @Inject
+    lateinit var artistDao: ArtistDao
+    @Inject
+    lateinit var mostListenedSongDao: MostListenedSongDao
+    @Inject
+    lateinit var apiInterface: ApiInterface
+
     private var favouriteSongs: List<Song> = emptyList()
     private var adapter: FavouriteSongAdapter? = null
     private var linearLayoutManager: LinearLayoutManager? = null
@@ -44,14 +60,12 @@ class FavouriteSongsActivity : AppCompatActivity() {
     }
 
     private fun initView() {
-        this.db = AppDatabase.getDatabase(this)
         tvTitle.text = getString(R.string.favourite_songs)
-        CommonBottomNavigationBar.getInstance()
-            .setCommonBottomNavigationBar(this, bottomBarMenu, R.id.favourite)
+        CommonBottomNavigationBar.setCommonBottomNavigationBar(this, bottomBarMenu, R.id.favourite)
 
         val uri = Uri.fromFile(
             getFileStreamPath(
-                AppSharedPreferences.getInstance().getString(this, AppSharedPreferences.USERNAME)
+                AppSharedPreferences.getString(this, AppSharedPreferences.USERNAME)
             )
         )
         val picture = File(uri.path!!)
@@ -96,11 +110,11 @@ class FavouriteSongsActivity : AppCompatActivity() {
 
     private fun getFavouriteSongs() {
         doAsync {
-            this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
-                AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
-            this@FavouriteSongsActivity.mostListenedSongs = db?.mostListenedSongDao()?.getMostListenedSongsByUser(
-                AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
-            this@FavouriteSongsActivity.artists = db?.artistDao()?.getAll()!!
+            this@FavouriteSongsActivity.favouriteSongs = this@FavouriteSongsActivity.favouriteDao.getFavouriteSongsByUserId(
+                AppSharedPreferences.getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID)!!.toInt())
+            this@FavouriteSongsActivity.mostListenedSongs = this@FavouriteSongsActivity.mostListenedSongDao.getMostListenedSongsByUser(
+                AppSharedPreferences.getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID)!!.toInt())
+            this@FavouriteSongsActivity.artists = this@FavouriteSongsActivity.artistDao.getAll()
             runOnUiThread{
                 this@FavouriteSongsActivity.setAdapter()
                 if(this@FavouriteSongsActivity.mostListenedSongs.isNotEmpty()) {
@@ -113,12 +127,12 @@ class FavouriteSongsActivity : AppCompatActivity() {
 
     fun removeFromFavourites(song: Song) {
         doAsync {
-            val favouriteSong = db?.favouriteSongDao()?.getFavoriteSong(
-                AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt(), song.id)!!
+            val favouriteSong = this@FavouriteSongsActivity.favouriteDao.getFavoriteSong(
+                AppSharedPreferences.getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID)!!.toInt(), song.id)
             if(favouriteSong.isNotEmpty()) {
-                db?.favouriteSongDao()?.delete(favouriteSong.first())
-                this@FavouriteSongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
-                    AppSharedPreferences.getInstance().getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID).toInt())!!
+                this@FavouriteSongsActivity.favouriteDao.delete(favouriteSong.first())
+                this@FavouriteSongsActivity.favouriteSongs = this@FavouriteSongsActivity.favouriteDao.getFavouriteSongsByUserId(
+                    AppSharedPreferences.getString(this@FavouriteSongsActivity, AppSharedPreferences.USER_ID)!!.toInt())
             }
             runOnUiThread{
                 Toast.makeText(this@FavouriteSongsActivity, getString(R.string.favourite_removed_successfully), Toast.LENGTH_LONG).show()
@@ -129,10 +143,10 @@ class FavouriteSongsActivity : AppCompatActivity() {
 
     fun openSongDetails(song: Song) {
         doAsync{
-            val artist = db?.artistDao()?.getArtistById(song.artistId)!!.first()
+            val artist = this@FavouriteSongsActivity.artistDao.getArtistById(song.artistId).first()
             val param = artist.name.toLowerCase(Locale.getDefault()).replace(" ", "+") + "+" + song.name.toLowerCase(
                 Locale.getDefault()).replace(" ", "+")
-            val call = AppUtils.getRetrofit().create(ApiInterface::class.java).search(param).execute()
+            val call = this@FavouriteSongsActivity.apiInterface.search(param).execute()
             uiThread {
                 if(call.isSuccessful) {
                     val response = call.body() as ItunesAPIResponse

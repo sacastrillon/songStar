@@ -7,13 +7,19 @@ import android.widget.ArrayAdapter
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import com.example.woo.songstar.R
-import com.example.woo.songstar.database.AppDatabase
+import com.example.woo.songstar.database.dao.UserDao
 import com.example.woo.songstar.models.User
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_create_user.*
 import kotlinx.android.synthetic.main.layout_top_bar.*
 import org.jetbrains.anko.doAsync
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class CreateUserActivity : AppCompatActivity() {
+
+    @Inject
+    lateinit var userDao: UserDao
 
     private var language: String = ""
     private val languages = listOf("English", "Spanish")
@@ -56,16 +62,14 @@ class CreateUserActivity : AppCompatActivity() {
     }
 
     private fun createUser() {
-        val db = AppDatabase.getDatabase(this)
-
         doAsync {
-            val user = db.userDao().getByUserName(this@CreateUserActivity.etUserName.text.toString())
+            val user = this@CreateUserActivity.userDao.getByUserName(this@CreateUserActivity.etUserName.text.toString())
             if(user.isNotEmpty()) {
                 runOnUiThread {
                     Toast.makeText(this@CreateUserActivity, getString(R.string.username_already_exists), Toast.LENGTH_LONG).show()
                 }
             } else {
-                db.userDao().insert(User(
+                this@CreateUserActivity.userDao.insert(User(
                     this@CreateUserActivity.etName.text.toString(),
                     this@CreateUserActivity.etUserName.text.toString(),
                     this@CreateUserActivity.etPassword.text.toString(),

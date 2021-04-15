@@ -20,7 +20,6 @@ class CustomChangePasswordDialog(context: Context, dialogCallback: DialogCallbac
 
     var dialogCallback: DialogCallback? = null
     private var db: AppDatabase? = null
-    private var preference = AppSharedPreferences()
 
     init {
         this.dialogCallback = dialogCallback
@@ -36,8 +35,6 @@ class CustomChangePasswordDialog(context: Context, dialogCallback: DialogCallbac
     }
 
     private fun initView() {
-        this.preference = AppSharedPreferences.getInstance()
-
         this.ivClosePassword.setOnClickListener {
             this.dismiss()
         }
@@ -60,12 +57,12 @@ class CustomChangePasswordDialog(context: Context, dialogCallback: DialogCallbac
         doAsync {
             try {
                 val user = db?.userDao()?.getUser(
-                    this@CustomChangePasswordDialog.preference.getString(this@CustomChangePasswordDialog.context,
-                        AppSharedPreferences.USERNAME), this@CustomChangePasswordDialog.etOldPassword.text.toString())
+                    AppSharedPreferences.getString(this@CustomChangePasswordDialog.context,
+                        AppSharedPreferences.USERNAME)!!, this@CustomChangePasswordDialog.etOldPassword.text.toString())
                 if(user?.isNotEmpty()!!) {
                     db?.userDao()?.updatePassword(this@CustomChangePasswordDialog.etNewPassword.text.toString(),
-                        this@CustomChangePasswordDialog.preference.getString(this@CustomChangePasswordDialog.context,
-                            AppSharedPreferences.USERNAME))
+                       AppSharedPreferences.getString(this@CustomChangePasswordDialog.context,
+                            AppSharedPreferences.USERNAME)!!)
                     context.runOnUiThread {
                         this@CustomChangePasswordDialog.dialogCallback?.submit("", 1)
                         this@CustomChangePasswordDialog.dismiss()

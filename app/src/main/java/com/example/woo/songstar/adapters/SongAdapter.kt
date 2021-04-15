@@ -74,7 +74,8 @@ class SongAdapter (context: Context, songs: List<Song>, favouriteSongs: List<Son
                 parent?.sendAsFavourite(song)
             }
             this.name?.setOnClickListener {
-                parent?.openSongDetails(song)
+                //parent?.openSongDetails(song)
+                parent?.openSongDetailsCuroutine(song)
             }
         }
     }

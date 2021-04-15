@@ -5,7 +5,6 @@ import android.content.Intent
 import android.graphics.ImageDecoder
 import android.net.Uri
 import android.os.Bundle
-import android.widget.ArrayAdapter
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.cursoradapter.widget.CursorAdapter
@@ -13,21 +12,29 @@ import androidx.cursoradapter.widget.SimpleCursorAdapter
 import androidx.recyclerview.widget.LinearLayoutManager
 import com.example.woo.songstar.R
 import com.example.woo.songstar.adapters.ArtistAdapter
-import com.example.woo.songstar.database.AppDatabase
+import com.example.woo.songstar.database.dao.ArtistDao
+import com.example.woo.songstar.database.dao.SearchUserDao
 import com.example.woo.songstar.models.Artist
 import com.example.woo.songstar.models.SearchUser
 import com.example.woo.songstar.utils.AppConstants
 import com.example.woo.songstar.utils.AppSharedPreferences
 import com.example.woo.songstar.utils.CircleImage
 import com.example.woo.songstar.utils.CommonBottomNavigationBar
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_artists.*
 import kotlinx.android.synthetic.main.layout_top_bar.*
 import org.jetbrains.anko.doAsync
 import java.io.File
+import javax.inject.Inject
 
+@AndroidEntryPoint
 class ArtistsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
-    private var db: AppDatabase? = null
+    @Inject
+    lateinit var artistDao: ArtistDao
+    @Inject
+    lateinit var searchUserDao: SearchUserDao
+
     private var artists: List<Artist> = emptyList()
     private var adapter: ArtistAdapter? = null
     private var searchUser: List<SearchUser> = emptyList()
@@ -45,8 +52,8 @@ class ArtistsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     override fun onQueryTextSubmit(query: String?): Boolean {
         doAsync {
-            val userSearch = SearchUser(query!!, AppSharedPreferences.getInstance().getString(this@ArtistsActivity, AppSharedPreferences.USER_ID).toInt())
-            db?.searchUserDao()?.insert(userSearch)
+            val userSearch = SearchUser(query!!, AppSharedPreferences.getString(this@ArtistsActivity, AppSharedPreferences.USER_ID)!!.toInt())
+            this@ArtistsActivity.searchUserDao.insert(userSearch)
         }
         return false
     }
@@ -57,13 +64,12 @@ class ArtistsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     }
 
     private fun initView() {
-        this.db = AppDatabase.getDatabase(this)
         tvTitle.text = getString(R.string.artists)
-        CommonBottomNavigationBar.getInstance().setCommonBottomNavigationBar(this, bottomBarMenu, R.id.artist)
+        CommonBottomNavigationBar.setCommonBottomNavigationBar(this, bottomBarMenu, R.id.artist)
 
         this.svSearchArtist.setOnQueryTextListener(this)
 
-        val uri = Uri.fromFile(getFileStreamPath(AppSharedPreferences.getInstance().getString(this, AppSharedPreferences.USERNAME)))
+        val uri = Uri.fromFile(getFileStreamPath(AppSharedPreferences.getString(this, AppSharedPreferences.USERNAME)))
         val picture = File(uri.path!!)
         if(picture.exists()) {
             doAsync {
@@ -93,8 +99,8 @@ class ArtistsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     private fun getArtists() {
         doAsync {
-            this@ArtistsActivity.artists = db?.artistDao()?.getAll()!!
-            this@ArtistsActivity.searchUser = db?.searchUserDao()?.getByUserId(AppSharedPreferences.getInstance().getString(this@ArtistsActivity, AppSharedPreferences.USER_ID).toInt())!!
+            this@ArtistsActivity.artists = this@ArtistsActivity.artistDao.getAll()
+            this@ArtistsActivity.searchUser = this@ArtistsActivity.searchUserDao.getByUserId(AppSharedPreferences.getString(this@ArtistsActivity, AppSharedPreferences.USER_ID)!!.toInt())
             runOnUiThread{
                 this@ArtistsActivity.setAdapter()
                 //this@ArtistsActivity.setSuggestions()

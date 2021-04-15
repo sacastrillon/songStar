@@ -14,25 +14,41 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.example.woo.songstar.R
 import com.example.woo.songstar.adapters.SongAdapter
-import com.example.woo.songstar.database.AppDatabase
+import com.example.woo.songstar.database.dao.ArtistDao
+import com.example.woo.songstar.database.dao.FavoriteSongDao
+import com.example.woo.songstar.database.dao.SongDao
 import com.example.woo.songstar.intefaces.ApiInterface
 import com.example.woo.songstar.models.FavouriteSong
 import com.example.woo.songstar.models.ItunesAPIResponse
 import com.example.woo.songstar.models.Song
 import com.example.woo.songstar.models.SongDetails
 import com.example.woo.songstar.utils.*
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_artists.bottomBarMenu
 import kotlinx.android.synthetic.main.activity_songs.*
 import kotlinx.android.synthetic.main.layout_top_bar.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.jetbrains.anko.doAsync
 import org.jetbrains.anko.uiThread
 import java.io.File
 import java.util.*
+import javax.inject.Inject
 import kotlin.collections.ArrayList
 
+@AndroidEntryPoint
 class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
-    private var db: AppDatabase? = null
+    @Inject
+    lateinit var songDao: SongDao
+    @Inject
+    lateinit var artistDao: ArtistDao
+    @Inject
+    lateinit var favouriteSongDao: FavoriteSongDao
+    @Inject
+    lateinit var apiInterface: ApiInterface
+
     private var songs: List<Song> = emptyList()
     private var listToShow: ArrayList<Song> = ArrayList()
     private var favouriteSongs: List<Song> = emptyList()
@@ -71,13 +87,12 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
     }
 
     private fun initView() {
-        this.db = AppDatabase.getDatabase(this)
         tvTitle.text = getString(R.string.songs)
-        CommonBottomNavigationBar.getInstance().setCommonBottomNavigationBar(this, bottomBarMenu, R.id.song)
+        CommonBottomNavigationBar.setCommonBottomNavigationBar(this, bottomBarMenu, R.id.song)
 
         this.svSearchSongs.setOnQueryTextListener(this)
 
-        val uri = Uri.fromFile(getFileStreamPath(AppSharedPreferences.getInstance().getString(this, AppSharedPreferences.USERNAME)))
+        val uri = Uri.fromFile(getFileStreamPath(AppSharedPreferences.getString(this, AppSharedPreferences.USERNAME)))
         val picture = File(uri.path!!)
         if(picture.exists()) {
             doAsync {
@@ -174,10 +189,14 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     private fun getSongs() {
         doAsync {
-            this@SongsActivity.songs = db?.songDao()?.getAll()!!
-            this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
-                AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt()
-            )!!
+            this@SongsActivity.songs = this@SongsActivity.songDao.getAll()
+            this@SongsActivity.favouriteSongs =
+                this@SongsActivity.favouriteSongDao.getFavouriteSongsByUserId(
+                    AppSharedPreferences.getString(
+                        this@SongsActivity,
+                        AppSharedPreferences.USER_ID
+                    )!!.toInt()
+                )
             this@SongsActivity.totalItems = songs.size
             runOnUiThread{
                 this@SongsActivity.setupPages()
@@ -187,10 +206,14 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     private fun getSongsByArtist(artistId: Int) {
         doAsync {
-            this@SongsActivity.songs = db?.songDao()?.getBySongsByArtist(artistId)!!
-            this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
-                AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt()
-            )!!
+            this@SongsActivity.songs = this@SongsActivity.songDao.getBySongsByArtist(artistId)
+            this@SongsActivity.favouriteSongs =
+                this@SongsActivity.favouriteSongDao.getFavouriteSongsByUserId(
+                    AppSharedPreferences.getString(
+                        this@SongsActivity,
+                        AppSharedPreferences.USER_ID
+                    )!!.toInt()
+                )
             this@SongsActivity.totalItems = songs.size
             runOnUiThread{
                 this@SongsActivity.setupPages()
@@ -200,10 +223,10 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
 
     fun openSongDetails(song: Song) {
         doAsync{
-            val artist = db?.artistDao()?.getArtistById(song.artistId)!!.first()
+            val artist = this@SongsActivity.artistDao.getArtistById(song.artistId).first()
             val param = artist.name.toLowerCase(Locale.getDefault()).replace(" ", "+") + "+" + song.name.toLowerCase(
                 Locale.getDefault()).replace(" ", "+")
-            val call = AppUtils.getRetrofit().create(ApiInterface::class.java).search(param).execute()
+            val call = this@SongsActivity.apiInterface.search(param).execute()
             uiThread {
                 if(call.isSuccessful) {
                     val response = call.body() as ItunesAPIResponse
@@ -225,17 +248,46 @@ class SongsActivity : AppCompatActivity(), SearchView.OnQueryTextListener {
         }
     }
 
+    fun openSongDetailsCuroutine(song: Song) {
+        GlobalScope.launch(Dispatchers.IO) {
+            val artist = this@SongsActivity.artistDao.getArtistById(song.artistId).first()
+            val param = artist.name.toLowerCase(Locale.getDefault()).replace(" ", "+") + "+" + song.name.toLowerCase(
+                Locale.getDefault()).replace(" ", "+")
+            val call = this@SongsActivity.apiInterface.searchCuroutine(param)
+            launch(Dispatchers.Main) {
+                if(call.isSuccessful) {
+                    val response = call.body() as ItunesAPIResponse
+                    if(response.results.size > 0) {
+                        this@SongsActivity.goToDetails(response.results.filter { it.artistName.isNotEmpty()
+                                && it.trackName.isNotEmpty() && it.image.isNotEmpty() }.first())
+                    } else {
+                        Toast.makeText(this@SongsActivity, getString(R.string.not_found), Toast.LENGTH_LONG).show()
+                    }
+                } else {
+                    try {
+                        Toast.makeText(this@SongsActivity, call.errorBody().toString(), Toast.LENGTH_LONG).show()
+                    } catch (e: Exception) {
+                        Toast.makeText(this@SongsActivity, e.message, Toast.LENGTH_LONG).show()
+                    }
+                }
+            }
+        }
+    }
+
     fun sendAsFavourite(song: Song) {
         doAsync{
-            val songs = this@SongsActivity.db?.favouriteSongDao()?.getFavoriteSong(
-                AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt(), song.id)
-            if(songs!!.isEmpty()) {
+            val songs = this@SongsActivity.favouriteSongDao.getFavoriteSong(
+                AppSharedPreferences.getString(this@SongsActivity, AppSharedPreferences.USER_ID)!!.toInt(), song.id)
+            if(songs.isEmpty()) {
                 val favouriteSong = FavouriteSong(song.id,
-                    AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt())
-                this@SongsActivity.db?.favouriteSongDao()?.insert(favouriteSong)
-                this@SongsActivity.favouriteSongs = db?.favouriteSongDao()?.getFavouriteSongsByUserId(
-                    AppSharedPreferences.getInstance().getString(this@SongsActivity, AppSharedPreferences.USER_ID).toInt()
-                )!!
+                    AppSharedPreferences.getString(this@SongsActivity, AppSharedPreferences.USER_ID)!!.toInt())
+                this@SongsActivity.favouriteSongDao.insert(favouriteSong)
+                this@SongsActivity.favouriteSongs = this@SongsActivity.favouriteSongDao.getFavouriteSongsByUserId(
+                    AppSharedPreferences.getString(
+                        this@SongsActivity,
+                        AppSharedPreferences.USER_ID
+                    )!!.toInt()
+                )
                 runOnUiThread {
                     this@SongsActivity.adapter?.update(this@SongsActivity.favouriteSongs)
                 }

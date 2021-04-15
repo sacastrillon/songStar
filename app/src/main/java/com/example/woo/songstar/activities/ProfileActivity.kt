@@ -17,12 +17,13 @@ import com.example.woo.songstar.R
 import com.example.woo.songstar.customDialogs.CustomChangePasswordDialog
 import com.example.woo.songstar.customDialogs.CustomEditLanguageDialog
 import com.example.woo.songstar.customDialogs.CustomEditNameDialog
-import com.example.woo.songstar.database.AppDatabase
+import com.example.woo.songstar.database.dao.UserDao
 import com.example.woo.songstar.intefaces.DialogCallback
 import com.example.woo.songstar.utils.AppSharedPreferences
 import com.example.woo.songstar.utils.CircleImage
 import com.example.woo.songstar.utils.CommonBottomNavigationBar
 import com.example.woo.songstar.utils.PermissionUtility
+import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.android.synthetic.main.activity_profile.*
 import kotlinx.android.synthetic.main.layout_top_bar.*
 import org.jetbrains.anko.doAsync
@@ -30,12 +31,13 @@ import java.io.BufferedInputStream
 import java.io.File
 import java.io.FileOutputStream
 import java.io.InputStream
+import javax.inject.Inject
 
-
+@AndroidEntryPoint
 class ProfileActivity : AppCompatActivity() {
 
-    private var preferences = AppSharedPreferences()
-    private var db: AppDatabase? = null
+    @Inject
+    lateinit var userDao: UserDao
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -44,19 +46,17 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun initView() {
-        CommonBottomNavigationBar.getInstance().setCommonBottomNavigationBar(this, this.bottomBarMenu, 0)
-        this.preferences = AppSharedPreferences.getInstance()
-        this.db = AppDatabase.getDatabase(this@ProfileActivity)
+        CommonBottomNavigationBar.setCommonBottomNavigationBar(this, this.bottomBarMenu, 0)
         this.tvTitle.text = getString(R.string.profile)
         this.ivProfile.visibility = View.GONE
-        if(preferences.getBoolean(this, AppSharedPreferences.IS_ADMIN)) {
+        if(AppSharedPreferences.getBoolean(this, AppSharedPreferences.IS_ADMIN)) {
             this.cvAdminOptions.visibility = View.VISIBLE
         }
 
         this.setAvatar()
 
-        this.tvName.text = preferences.getString(this, AppSharedPreferences.NAME)
-        this.etLanguage.setText(preferences.getString(this, AppSharedPreferences.LANGUAGE))
+        this.tvName.text = AppSharedPreferences.getString(this, AppSharedPreferences.NAME)
+        this.etLanguage.setText(AppSharedPreferences.getString(this, AppSharedPreferences.LANGUAGE))
 
         this.rlProfilePic.setOnClickListener {
             if (PermissionUtility.checkPermissionIsGrant(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
@@ -111,7 +111,7 @@ class ProfileActivity : AppCompatActivity() {
                 .setTitle(R.string.logout)
                 .setMessage(getString(R.string.do_you_want_to_logout))
                 .setPositiveButton(R.string.yes) { _, _ ->
-                    this.preferences.clearAllPreferences(this)
+                    AppSharedPreferences.clearAllPreferences(this)
                     val intent = Intent(this, LoginActivity::class.java).apply{
                         addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP)
                         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
@@ -127,7 +127,7 @@ class ProfileActivity : AppCompatActivity() {
     }
 
     private fun setAvatar() {
-        val uri = Uri.fromFile(getFileStreamPath(preferences.getString(this, AppSharedPreferences.USERNAME)))
+        val uri = Uri.fromFile(getFileStreamPath(AppSharedPreferences.getString(this, AppSharedPreferences.USERNAME)))
         val picture = File(uri.path.toString())
         if(picture.exists()) {
             val image: ImageDecoder.Source = ImageDecoder.createSource(this.contentResolver, uri)
@@ -201,11 +201,11 @@ class ProfileActivity : AppCompatActivity() {
     private fun updateUserName(name: String) {
         doAsync {
             try{
-                val user = this@ProfileActivity.db?.userDao()?.getByUserName(this@ProfileActivity.preferences.getString(this@ProfileActivity, AppSharedPreferences.USERNAME))?.first()
-                this@ProfileActivity.db?.userDao()?.updateName(name, user?.username.toString())
+                val user = this@ProfileActivity.userDao.getByUserName(AppSharedPreferences.getString(this@ProfileActivity, AppSharedPreferences.USERNAME)!!).first()
+                this@ProfileActivity.userDao.updateName(name, user.username)
                 runOnUiThread{
                     this@ProfileActivity.tvName.text = name
-                    this@ProfileActivity.preferences.putString(this@ProfileActivity, AppSharedPreferences.NAME, name)
+                    AppSharedPreferences.putString(this@ProfileActivity, AppSharedPreferences.NAME, name)
                 }
             } catch (e: Exception) {
                 runOnUiThread{
@@ -219,11 +219,11 @@ class ProfileActivity : AppCompatActivity() {
 
         doAsync {
             try{
-                val user = this@ProfileActivity.db?.userDao()?.getByUserName(this@ProfileActivity.preferences.getString(this@ProfileActivity, AppSharedPreferences.USERNAME))?.first()
-                this@ProfileActivity.db?.userDao()?.updateLanguage(language, user?.username.toString())
+                val user = this@ProfileActivity.userDao.getByUserName(AppSharedPreferences.getString(this@ProfileActivity, AppSharedPreferences.USERNAME)!!).first()
+                this@ProfileActivity.userDao.updateLanguage(language, user.username)
                 runOnUiThread{
                     this@ProfileActivity.etLanguage.setText(language)
-                    this@ProfileActivity.preferences.putString(this@ProfileActivity, AppSharedPreferences.LANGUAGE, language)
+                    AppSharedPreferences.putString(this@ProfileActivity, AppSharedPreferences.LANGUAGE, language)
                 }
             } catch (e: Exception) {
                 runOnUiThread{
@@ -235,7 +235,7 @@ class ProfileActivity : AppCompatActivity() {
 
     private fun saveImage(image: Bitmap) {
         try {
-            val fileName = this.preferences.getString(this, AppSharedPreferences.USERNAME)
+            val fileName = AppSharedPreferences.getString(this, AppSharedPreferences.USERNAME)
             val fileOutputStream: FileOutputStream = openFileOutput(fileName, Context.MODE_PRIVATE)
             image.compress(Bitmap.CompressFormat.JPEG, 100, fileOutputStream)
             fileOutputStream.close()
